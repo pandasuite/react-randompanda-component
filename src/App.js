@@ -1,10 +1,15 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import './App.css';
 import _ from 'lodash';
 
-import PandaBridgeComponent, { usePandaBridge } from 'pandasuite-bridge-react';
+import PandaBridge from 'pandasuite-bridge';
+import { usePandaBridge } from 'pandasuite-bridge-react';
+import PandaExampleImage from './PandaExampleImage';
 
 function App() {
+  const pandaImageEl = useRef(null);
+  const [backgroundColor, setBackgroundColor] = useState();
+
   const {
     /* We retrieve the properties defined in the pandasuite.json file */
     properties,
@@ -26,26 +31,58 @@ function App() {
       markers: {
         /* This method is auto-generated
           it's called up by clicking on "Add Marker" from the studio. */
-        getSnapshotDataHook: () => ({ id: _.uniqueId() }),
+        getSnapshotDataHook: () => {
+          const { name, src } = pandaImageEl.current.getSource();
+          return { id: name, src };
+        },
       },
-      actions: {},
-      synchronization: {},
+      actions: {
+        changeColor: ({ backgroundColor: bgColor }) => {
+          setBackgroundColor(bgColor);
+        },
+      },
+      synchronization: {
+        synchroImages: (percent) => {
+          console.log(percent);
+        },
+      },
     },
   );
 
-  /* Or you can use, instead of hooks, directly the component
-    that will work on the same principle. */
+  const { 'my_image.png': myImage } = resources || {};
+  console.log((myImage || {}).path);
+
+  const { searchTerm } = properties || {};
+
+  const { data, params } = triggeredMarker || {};
+  let { src } = data || {};
+  const { useless } = params || {};
+  if (useless) {
+    src = null;
+  }
+
+  const onImageChanged = ({ name, src: changedSrc }) => {
+    const markerIndex = _.findIndex(markers, (m) => m.src === changedSrc);
+
+    if (markerIndex !== -1) {
+      PandaBridge.send(PandaBridge.SYNCHRONIZE, [(markerIndex * 100) / markers.length, 'synchroImages', true]);
+      PandaBridge.send(PandaBridge.TRIGGER_MARKER, markers[markerIndex].id);
+    }
+    PandaBridge.send('imageChanged', [{ name, src: changedSrc }]);
+  };
+
   return (
-    <div className="App">
-      <PandaBridgeComponent
-        markers={{}}
-        actions={{}}
-        synchronization={{}}
-      >
-        {({
-          properties, markers, resources, triggeredMarker,
-        }) => (<></>)}
-      </PandaBridgeComponent>
+    <div className="App" style={{ backgroundColor }}>
+      Hello Panda!
+      <br />
+      <br />
+      <PandaExampleImage
+        ref={pandaImageEl}
+        src={src}
+        searchTerm={searchTerm}
+        refreshButton={PandaBridge.isStudio}
+        onImageChanged={onImageChanged}
+      />
     </div>
   );
 }
