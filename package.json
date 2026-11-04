@@ -16,7 +16,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
+    "build": "rm -f ./pandasuite-component.zip ./react-randompanda-component-v*.zip && react-scripts build && cd build && zip -r -X \"../react-randompanda-component-v$npm_package_version.zip\" *",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
